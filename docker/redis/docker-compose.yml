@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  redis-cv-master:
+    image: redis:latest
+    container_name: redis-cv-master
+    networks:
+      - redis-cv-network
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./redis-cv-master:/etc/redis
+    command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+
+  redis-cv-replica-1:
+    image: redis:latest
+    container_name: redis-cv-replica-1
+    networks:
+      - redis-cv-network
+    ports:
+      - ${REDIS_REPLICA_1_PORT}:6379
+    depends_on:
+      - redis-cv-master
+    volumes:
+      - ./redis-cv-replica-1:/etc/redis
+    command: redis-server /etc/redis/redis.conf --masterauth ${REDIS_PASSWORD} --requirepass ${REDIS_REPLICA_1_PASSWORD}
+  
+  redis-cv-replica-2:
+    image: redis:latest
+    container_name: redis-cv-replica-2
+    networks:
+      - redis-cv-network
+    ports:
+      - ${REDIS_REPLICA_2_PORT}:6379
+    depends_on:
+      - redis-cv-master
+    volumes:
+      - ./redis-cv-replica-2:/etc/redis
+    command: redis-server /etc/redis/redis.conf --masterauth ${REDIS_PASSWORD} --requirepass ${REDIS_REPLICA_2_PASSWORD}
+
+networks:
+  redis-cv-network:
+    external: true
