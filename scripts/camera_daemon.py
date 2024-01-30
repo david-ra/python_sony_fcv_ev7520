@@ -9,7 +9,11 @@ import threading
 import signal
 import time
 
-from .Camera import SonyCamera
+from src.Camera import SonyCamera
+
+# read environment variables
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 # Configure logging
 import logging as logger
@@ -20,22 +24,22 @@ logger.basicConfig(
 # GLOBAL FLAG FOR STREAMING STATE - ON/OFF
 continue_streaming = True
 
-
 def stop_streaming(signal, frame):
     global continue_streaming
     logger.info("Stopping streamming service...")
     continue_streaming = False
 
-def start_streaming(camera:SonyCamera, resolution:tuple, timeout:int=5000):
+def start_streaming(camera:SonyCamera):
     redis_cli = redis.StrictRedis(
             host=os.environ["REDIS_HOST"],
             port=int(os.environ["REDIS_PORT"]),
             password=os.environ["REDIS_PASSWORD"])
     
+    redis_cli.flushdb()
+
     logger.info(f"Starting Streaming to Redis {os.environ.get('REDIS_HOST')}:{os.environ.get('REDIS_PORT')}")
     
-    
-    while camera.conn.isOpen() and continue_streaming:
+    while continue_streaming:
         # getting current frame
         ret, frame = camera.stream.read()
         if ret:
@@ -49,9 +53,11 @@ def main():
     # Configure signal handling for camera threads
     signal.signal(signal.SIGINT, stop_streaming)
     # get all camera controllers
-    resolution = (int(os.environ["WIDTH"]), int(os.environ["HEIGHT"]))
+    #resolution = (int(os.environ["WIDTH"]), int(os.environ["HEIGHT"]))
     threads = []
-    camera_thread = threading.Thread(target=start_streaming, args=("04b4","00f9"))
+
+    camera = SonyCamera(vid="04b4", pid="00f9")
+    camera_thread = threading.Thread(target=start_streaming, args=(camera, ))
     threads.append(camera_thread)
     camera_thread.start() # starting execution
     
